@@ -1,29 +1,27 @@
 ---
 resources:
-- name: source-code
-  type: git
-  source:
+    - name: source-code
+      type: git
+      source:
           uri: https://github.com/spring-projects/spring-petclinic.git
           branch: master
 
-
 jobs:
-        - name: build
-          plan:
-                  - get: source-code
-                  - task: compile
-                    config:
-                            platform: linux
-                            image_resource:
-                                    type: docker-image
-                                    source:
-                                            repository: openjdk
-                                            tag: 8-jdk-slim
-                            inputs:
-                                    - name: source-code
-                                      path: .
-                            run:
-                                    path: ./mvnw
-                                    args:
-                                            - package
-
+    - name: build
+      plan:
+          - get: source-code
+          - task: compile
+            config:
+                platform: linux
+                image_resource:
+                    type: docker-image
+                    source:
+                        repository: openjdk
+                        tag: 8-jdk-slim
+                inputs:
+                    - name: source-code
+                      path: .
+                run:
+                    path: ./mvnw
+                    args:
+                        - package
