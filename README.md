@@ -32,8 +32,36 @@ Continuous delivery best practices:
 ## 2nd step: create a Job called `perf-test`
 In this step we are going to deploy the app to a staging environment and run performance tests
 
-1. TODO Create a Job called `perf-test`
-1. TODO Create a Task called `deploy-to-perf-env` that will download the jar and deploy to a test environment
+1. Create a Job called `perf-test` and pass the `bucket` Resource to it using the `passed` in the `get` Step
+1. Create a Task called `deploy-to-perf-env` that will download the jar and deploy to a CloudFoundry test environment 
+```yaml
+       - task: deploy-to-perf-env                                                                                                                                                           │··········
+              config:                                                                                                                                                                            │··········
+                  platform: linux                                                                                                                                                                │··········
+                  image_resource:                                                                                                                                                                │··········
+                      type: docker-image                                                                                                                                                         │··········
+                      source:                                                                                                                                                                    │··········
+                          repository: governmentpaas/cf-cli                                                                                                                                      │··········
+                  inputs:                                                                                                                                                                        │··········
+                      - name: bucket                                                                                                                                                             │··········
+                  params:                                                                                                                                                                        │··········
+                      CF_API: ((cf_api))                                                                                                                                                         │··········
+                      CF_USERNAME: ((cf_user))                                                                                                                                                   │··········
+                      CF_PASSWORD: ((cf_password))                                                                                                                                               │··········
+                      CF_SPACE: system                                                                                                                                                           │··········
+                      CF_ORG: system                                                                                                                                                             │··········
+                  run:                                                                                                                                                                           │··········
+                      path: /bin/sh                                                                                                                                                              │··········
+                      args:                                                                                                                                                                      │··········
+                          - -c                                                                                                                                                                   │··········
+                          - |                                                                                                                                                                    │··········
+                              set -eu                                                                                                                                                            │··········
+                              cf api $CF_API --skip-ssl-validation                                                                                                                               │··········
+                              cf auth $CF_USERNAME $CF_PASSWORD                                                                                                                                  │··········
+                              cf target -o $CF_ORG -s $CF_SPACE                                                                                                                                  │··········
+                                                                                                                                                                                                 │··········
+                              cf push pet-clinic1 -p bucket/*.jar
+```
 1. TODO Create a Task to run the performance tests `PETCLINIC_HOST=localhost PETCLINIC_PORT=8080 jmeter -n -t src/test/jmeter/petclinic_test_plan.jmx -l $TMPDIR/log.jtl`
 
 ## 3tr step: create a Job called `deploy`
