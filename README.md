@@ -1,4 +1,4 @@
-TODO in this repo:
+# TODO in this repo:
 - fix Concourse
 - finish pipeline and create tags to step
 - review readme and improve/complete instructions
@@ -6,22 +6,22 @@ TODO in this repo:
 - create variable in for groups and refactor pipeline
 - add CF paterns to every step
 
-TODO for the conference:
+# TODO for the conference:
 - create 10 pipelines and run them to check Concourse capacity
 - Slidedeck
 - Create a concourse user
 - Claim one PCF env in the day + create cf user + create space
 
-TODO Extra:
+# TODO Extra:
 - URL for minio server
--
+
 # Deployment pipeline
 
 ## Context
 
 ## Requirements
 In order to run this workshop you will need to have the following tools available in your local workstation:
-- [fly](https://concourse-ci.org/download.html]
+- [fly](https://concourse-ci.org/download.html)
 
 ## 1st step: create a job called `build`
 In this step we are going to create a `build` job that will compile the application and run unit tests.
@@ -37,12 +37,30 @@ Continuous delivery best practices:
 1. Add a Task called `package` to `build` that will run `./mvnw package` inside a `openjdk:8-jdk-slim` Docker container
 1. Trigger the `build` and make sure it is green: `fly -t comandante <target> -j <pipeline name>/build`
 1. Create an Output to save the jar to our S3-compatible server:
+
 ```yaml
- - name: bucket                                                                                                                                                                             │·········· type: s3                                                                                                                                                                                 │·········· source:                                                                                                                                                                                  │·········· bucket: devopsdayberlin                                                                                                                                                              │·········· endpoint: http://35.240.36.56:9000                                                                                                                                                   │·········· disable_ssl: true                                                                                                                                                                    │·········· access_key_id: admin                                                                                                                                                                 │·········· secret_access_key: devopsdayberlin2018                                                                                                                                               │·········· regexp: spring-petclinic-(.*).jar
+- name: bucket
+  type: s3
+    source:
+    bucket: devopsdayberlin
+    endpoint: http://35.240.36.56:9000
+    disable_ssl: true
+    access_key_id: admin
+    secret_access_key: devopsdayberlin2018
+    regexp: spring-petclinic-(.*).jar
 ```
 1. Create a semver Resource that will store the version to be used in our S3-compatible server:
 ```yaml
-- name: version                                                                                                                                                                            │·········· type: semver                                                                                                                                                                             │·········· source:                                                                                                                                                                                  │·········· driver: s3                                                                                                                                                                           │·········· bucket: devopsdayberlin                                                                                                                                                              │·········· endpoint: http://35.240.36.56:9000                                                                                                                                                   │·········· disable_ssl: true                                                                                                                                                                    │·········· access_key_id: admin                                                                                                                                                                 │·········· secret_access_key: devopsdayberlin2018                                                                                                                                               │·········· key: workshop/release-version
+- name: version
+  type: semver
+  source:
+    driver: s3
+    bucket: devopsdayberlin
+    endpoint: http://35.240.36.56:9000
+    disable_ssl: true
+    access_key_id: admin
+    secret_access_key: devopsdayberlin2018
+    key: workshop/release-version
 ```
 1. Modify the `package` Task to create a jar using the version from the semver Resource
 
@@ -51,33 +69,33 @@ In this step we are going to deploy the app to a staging environment and run per
 
 1. Create a Job called `perf-test` and pass the `bucket` Resource to it using the `passed` in the `get` Step
 1. Create a Task called `deploy-to-perf-env` that will download the jar and deploy to a CloudFoundry test environment 
+
 ```yaml
-       - task: deploy-to-perf-env                                                                                                                                                           │··········
-              config:                                                                                                                                                                            │··········
-                  platform: linux                                                                                                                                                                │··········
-                  image_resource:                                                                                                                                                                │··········
-                      type: docker-image                                                                                                                                                         │··········
-                      source:                                                                                                                                                                    │··········
-                          repository: governmentpaas/cf-cli                                                                                                                                      │··········
-                  inputs:                                                                                                                                                                        │··········
-                      - name: bucket                                                                                                                                                             │··········
-                  params:                                                                                                                                                                        │··········
-                      CF_API: ((cf_api))                                                                                                                                                         │··········
-                      CF_USERNAME: ((cf_user))                                                                                                                                                   │··········
-                      CF_PASSWORD: ((cf_password))                                                                                                                                               │··········
-                      CF_SPACE: system                                                                                                                                                           │··········
-                      CF_ORG: system                                                                                                                                                             │··········
-                  run:                                                                                                                                                                           │··········
-                      path: /bin/sh                                                                                                                                                              │··········
-                      args:                                                                                                                                                                      │··········
-                          - -c                                                                                                                                                                   │··········
-                          - |                                                                                                                                                                    │··········
-                              set -eu                                                                                                                                                            │··········
-                              cf api $CF_API --skip-ssl-validation                                                                                                                               │··········
-                              cf auth $CF_USERNAME $CF_PASSWORD                                                                                                                                  │··········
-                              cf target -o $CF_ORG -s $CF_SPACE                                                                                                                                  │··········
-                                                                                                                                                                                                 │··········
-                              cf push pet-clinic1 -p bucket/*.jar
+- task: deploy-to-perf-env
+  config:
+    platform: linux
+    image_resource:
+      type: docker-image
+      source:
+        repository: governmentpaas/cf-cli
+    inputs:
+      - name: bucket
+    params:
+      CF_API: ((cf_api))
+      CF_USERNAME: ((cf_user))
+      CF_PASSWORD: ((cf_password))
+      CF_SPACE: system
+      CF_ORG: system
+    run:
+      path: /bin/sh
+      args:
+        - -c
+        - |
+            set -eu
+            cf api $CF_API --skip-ssl-validation
+            cf auth $CF_USERNAME $CF_PASSWORD
+            cf target -o $CF_ORG -s $CF_SPACE
+            cf push pet-clinic1 -p bucket/*.jar
 ```
 1. TODO Create a Task to run the performance tests `PETCLINIC_HOST=localhost PETCLINIC_PORT=8080 jmeter -n -t src/test/jmeter/petclinic_test_plan.jmx -l $TMPDIR/log.jtl`
 

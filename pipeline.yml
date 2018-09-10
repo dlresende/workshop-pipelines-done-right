@@ -5,6 +5,7 @@ resources:
       source:
           uri: https://github.com/spring-projects/spring-petclinic.git
           branch: master
+
     - name: bucket
       type: s3
       source:
@@ -14,6 +15,7 @@ resources:
           access_key_id: admin
           secret_access_key: devopsdayberlin2018
           regexp: spring-petclinic-(.*).jar
+
     - name: version
       type: semver
       source:
@@ -95,7 +97,6 @@ jobs:
                             cf api $CF_API --skip-ssl-validation
                             cf auth $CF_USERNAME $CF_PASSWORD
                             cf target -o $CF_ORG -s $CF_SPACE
-
                             cf push pet-clinic1 -p bucket/*.jar
           - task: run-perf-test
             config:
