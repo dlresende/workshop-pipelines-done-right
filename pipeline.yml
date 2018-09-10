@@ -5,11 +5,33 @@ resources:
       source:
           uri: https://github.com/spring-projects/spring-petclinic.git
           branch: master
+    - name: bucket
+      type: s3
+      source:
+          bucket: devopsdayberlin
+          endpoint: http://35.240.36.56:9000
+          disable_ssl: true
+          access_key_id: admin
+          secret_access_key: devopsdayberlin2018
+          regexp: spring-petclinic-(.*).jar
+    - name: version
+      type: semver
+      source:
+          driver: s3
+          bucket: devopsdayberlin
+          endpoint: http://35.240.36.56:9000
+          disable_ssl: true
+          access_key_id: admin
+          secret_access_key: devopsdayberlin2018
+          key: workshop/release-version
 
 jobs:
     - name: build
       plan:
           - get: source-code
+          - get: version
+            params:
+                pre: alpha
           - task: compile
             config:
                 platform: linux
@@ -20,8 +42,25 @@ jobs:
                         tag: 8-jdk-slim
                 inputs:
                     - name: source-code
-                      path: .
+                    - name: version
+                outputs:
+                    - name: release-jar
                 run:
-                    path: ./mvnw
+                    path: /bin/sh
                     args:
-                        - package
+                        - -c
+                        - |
+                            set -eu
+                            cd source-code
+                            ./mvnw versions:set -DnewVersion=$(cat ../version/version)
+                            ./mvnw package
+
+                            cd ..
+
+                            cp source-code/target/*.jar release-jar/
+          - put: version
+            params:
+                file: version/version
+          - put: bucket
+            params:
+                file: release-jar/*.jar
