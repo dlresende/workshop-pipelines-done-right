@@ -23,6 +23,13 @@
 In order to run this workshop you will need to have the following tools available in your local workstation:
 - [fly](https://concourse-ci.org/download.html)
 
+## Setup
+`fly` is a command line interface that allows you to interact with Concourse.
+
+Follow the steps below in order to configure `fly`:
+1. Log into Concourse and add the Concourse server to your fly CLI target's list: `fly -t comandante login --concourse-url https://play.comandante.ci/`
+1. Check that you have logged in successfully and your fly CLI can talk to Concourse: `fly -t comandante status`
+
 ## 1st step: create a job called `build`
 In this step we are going to create a `build` job that will compile the application and run unit tests.
 
@@ -31,11 +38,11 @@ Continuous delivery best practices:
 
 1. Create a file called pipeline.yml that you will use to create all your pipeline configuration
 1. Create a [Job](https://concourse-ci.org/jobs.html) called `build` with an empty [Plan](https://concourse-ci.org/jobs.html#job-plan)
-1. Set the pipeline with `fly -t <target> set-pipeline -p <pipeline name> -c pipeline.yml`
-1. Run `fly -t <target> pipelines` and observe that your pipeline was successfully created
+1. Set the pipeline with `fly -t comandante set-pipeline -p <pipeline name> -c pipeline.yml`
+1. Run `fly -t comandante pipelines` and observe that your pipeline was successfully created
 1. Create a [ Git Resource ](https://github.com/concourse/git-resource) for `https://github.com/spring-projects/spring-petclinic` (more about Resources [here](https://concourse-ci.org/resources.html))
 1. Add a Task called `package` to `build` that will run `./mvnw package` inside a `openjdk:8-jdk-slim` Docker container
-1. Trigger the `build` and make sure it is green: `fly -t comandante <target> -j <pipeline name>/build`
+1. Trigger the `build` and make sure it is green: `fly -t comandante -j <pipeline name>/build`
 1. Create an Output to save the jar to our S3-compatible server:
 
 ```yaml
@@ -50,6 +57,7 @@ Continuous delivery best practices:
     regexp: spring-petclinic-(.*).jar
 ```
 1. Create a semver Resource that will store the version to be used in our S3-compatible server:
+
 ```yaml
 - name: version
   type: semver
