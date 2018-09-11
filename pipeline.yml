@@ -67,95 +67,73 @@ jobs:
             params:
                 file: release-jar/*.jar
 
-    - name: perf-test
+    - name: deploy
       plan:
           - get: compiled-jar
             passed: [build]
             trigger: true
           - get: source-code
             passed: [build]
-          - do:
-                - task: deploy-to-perf-env
-                  config:
-                      platform: linux
-                      image_resource:
-                          type: docker-image
-                          source:
-                              repository: governmentpaas/cf-cli
-                      inputs:
-                          - name: compiled-jar
-                      params:
-                          CF_API: ((cf_api))
-                          CF_USERNAME: ((cf_user))
-                          CF_PASSWORD: ((cf_password))
-                          CF_SPACE: ((cf_perf_space))
-                          CF_ORG: ((cf_org))
-                          APP_NAME: petclinic-((cf_perf_space))-((team))
-                      run:
-                          path: /bin/sh
-                          args:
-                              - -c
-                              - |
-                                  set -eu
-                                  cf api $CF_API --skip-ssl-validation
-                                  cf auth $CF_USERNAME $CF_PASSWORD
-                                  cf target -o $CF_ORG -s $CF_SPACE
-                                  cf push $APP_NAME -p compiled-jar/*.jar
-                - task: run-perf-test
-                  config:
-                      platform: linux
-                      image_resource:
-                          type: docker-image
-                          source:
-                              repository: justb4/jmeter
-                      inputs:
-                          - name: source-code
-                      params:
-                          PETCLINIC_HOST: http://petclinic-((cf_perf_space))-((team)).((cf_app_domain))
-                          PETCLINIC_PORT: 80
-                      run:
-                          path: /bin/sh
-                          args:
-                              - -c
-                              - |
-                                  set -eu
-                                  jmeter -n -t source-code/src/test/jmeter/petclinic_test_plan.jmx -l ./log.jtl
-            ensure:
-              task: delete-app
-              config:
-                  platform: linux
-                  image_resource:
-                      type: docker-image
-                      source:
-                          repository: governmentpaas/cf-cli
-                  inputs:
-                      - name: compiled-jar
-                  params:
-                      CF_API: ((cf_api))
-                      CF_USERNAME: ((cf_user))
-                      CF_PASSWORD: ((cf_password))
-                      CF_SPACE: ((cf_perf_space))
-                      CF_ORG: ((cf_org))
-                      APP_NAME: petclinic-((cf_perf_space))-((team))
-                  run:
-                      path: /bin/sh
-                      args:
-                          - -c
-                          - |
-                              set -eu
-                              cf api $CF_API --skip-ssl-validation
-                              cf auth $CF_USERNAME $CF_PASSWORD
-                              cf target -o $CF_ORG -s $CF_SPACE
-                              cf delete -f $APP_NAME
+          - task: push-to-staging
+            config:
+                platform: linux
+                image_resource:
+                    type: docker-image
+                    source:
+                        repository: governmentpaas/cf-cli
+                inputs:
+                    - name: compiled-jar
+                params:
+                    CF_API: ((cf_api))
+                    CF_USERNAME: ((cf_user))
+                    CF_PASSWORD: ((cf_password))
+                    CF_SPACE: ((cf_staging_space))
+                    CF_ORG: ((cf_org))
+                    APP_NAME: petclinic-((cf_staging_space))-((team))
+                run:
+                    path: /bin/sh
+                    args:
+                        - -c
+                        - |
+                            set -eu
+                            cf api $CF_API --skip-ssl-validation
+                            cf auth $CF_USERNAME $CF_PASSWORD
+                            cf target -o $CF_ORG -s $CF_SPACE
+                            cf push $APP_NAME -p compiled-jar/*.jar
 
-    - name: deploy
+    - name: test
+      plan:
+          - get: source-code
+            passed: [deploy]
+          - get: compiled-jar
+            passed: [deploy]
+            trigger: true
+          - task: run-test
+            config:
+                platform: linux
+                image_resource:
+                    type: docker-image
+                    source:
+                        repository: justb4/jmeter
+                inputs:
+                    - name: source-code
+                params:
+                    PETCLINIC_HOST: http://petclinic-((cf_staging_space))-((team)).((cf_app_domain))
+                    PETCLINIC_PORT: 80
+                run:
+                    path: /bin/sh
+                    args:
+                        - -c
+                        - |
+                            set -eu
+                            jmeter -n -t source-code/src/test/jmeter/petclinic_test_plan.jmx -l ./log.jtl
+
+    - name: release
       plan:
           - aggregate:
-                - get: source-code
-                  passed: [perf-test]
                 - get: compiled-jar
                   trigger: true
-                  passed: [perf-test]
+                  passed: [test]
           - task: push-to-prod
             config:
                 platform: linux
