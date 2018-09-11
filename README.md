@@ -1,20 +1,3 @@
-# TODO in this repo:
-- fix Concourse ✅
-- finish pipeline and create tags to step ✅
-- review readme and improve/complete instructions
-- add instructions to co tab for every step
-- create variable in for groups and refactor pipeline
-- add CF paterns to every step
-
-# TODO for the conference:
-- create 10 pipelines and run them to check Concourse capacity
-- Slidedeck
-- Create a concourse user
-- Claim one PCF env in the day + create cf user + create space
-
-# TODO Extra:
-- URL for minio server
-
 # Deployment pipeline
 
 ## Context
