@@ -9,23 +9,23 @@ resources:
     - name: compiled-jar
       type: s3
       source:
-          bucket: devopsdayberlin
-          endpoint: http://35.240.36.56:9000
-          disable_ssl: true
-          access_key_id: admin
-          secret_access_key: devopsdayberlin2018
-          regexp: spring-petclinic-(.*).jar
+          regexp: ((team))/packages/spring-petclinic-(.*).jar
+          bucket: devopsdays-2018-berlin
+          endpoint: ((s3_endpoint))
+          disable_ssl: ((s3_disable_ssl))
+          access_key_id: ((s3_access_key_id))
+          secret_access_key: ((s3_secret_access_key))
 
     - name: version
       type: semver
       source:
           driver: s3
-          bucket: devopsdayberlin
-          endpoint: http://35.240.36.56:9000
-          disable_ssl: true
-          access_key_id: admin
-          secret_access_key: devopsdayberlin2018
-          key: workshop/release-version
+          key: ((team))/release-version
+          bucket: devopsdays-2018-berlin
+          endpoint: ((s3_endpoint))
+          disable_ssl: ((s3_disable_ssl))
+          access_key_id: ((s3_access_key_id))
+          secret_access_key: ((s3_secret_access_key))
 
 jobs:
     - name: build
@@ -45,8 +45,6 @@ jobs:
                 inputs:
                     - name: source-code
                     - name: version
-                outputs:
-                    - name: release-jar
                 run:
                     path: /bin/sh
                     args:
@@ -60,6 +58,8 @@ jobs:
                             cd ..
 
                             cp source-code/target/*.jar release-jar/
+                outputs:
+                    - name: release-jar
           - put: version
             params:
                 file: version/version
@@ -89,8 +89,8 @@ jobs:
                           CF_USERNAME: ((cf_user))
                           CF_PASSWORD: ((cf_password))
                           CF_SPACE: ((cf_perf_space))
-                          CF_ORG: ((cf_perf_org))
-                          APP_NAME: ((cf_test_app_name))
+                          CF_ORG: ((cf_org))
+                          APP_NAME: petclinic-((cf_perf_space))-((team))
                       run:
                           path: /bin/sh
                           args:
@@ -111,7 +111,7 @@ jobs:
                       inputs:
                           - name: source-code
                       params:
-                          PETCLINIC_HOST: http://((cf_test_app_name)).apps.nickel.cf-app.com/
+                          PETCLINIC_HOST: http://petclinic-((cf_perf_space))-((team)).((cf_app_domain))
                           PETCLINIC_PORT: 80
                       run:
                           path: /bin/sh
@@ -135,8 +135,8 @@ jobs:
                       CF_USERNAME: ((cf_user))
                       CF_PASSWORD: ((cf_password))
                       CF_SPACE: ((cf_perf_space))
-                      CF_ORG: ((cf_perf_org))
-                      APP_NAME: ((cf_test_app_name))
+                      CF_ORG: ((cf_org))
+                      APP_NAME: petclinic-((cf_perf_space))-((team))
                   run:
                       path: /bin/sh
                       args:
@@ -170,8 +170,8 @@ jobs:
                     CF_USERNAME: ((cf_user))
                     CF_PASSWORD: ((cf_password))
                     CF_SPACE: ((cf_prod_space))
-                    CF_ORG: ((cf_prod_org))
-                    APP_NAME: ((cf_prod_app_name))
+                    CF_ORG: ((cf_org))
+                    APP_NAME: petclinic-((team))
                 run:
                     path: /bin/sh
                     args:
