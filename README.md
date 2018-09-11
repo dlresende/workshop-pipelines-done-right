@@ -1,6 +1,6 @@
 # TODO in this repo:
-- fix Concourse
-- finish pipeline and create tags to step
+- fix Concourse ✅
+- finish pipeline and create tags to step ✅
 - review readme and improve/complete instructions
 - add instructions to co tab for every step
 - create variable in for groups and refactor pipeline
@@ -39,7 +39,7 @@ Continuous delivery best practices:
 1. Create an Output to save the jar to our S3-compatible server:
 
 ```yaml
-- name: bucket
+- name: compiled-jar
   type: s3
     source:
     bucket: devopsdayberlin
@@ -67,7 +67,7 @@ Continuous delivery best practices:
 ## 2nd step: create a Job called `perf-test`
 In this step we are going to deploy the app to a staging environment and run performance tests
 
-1. Create a Job called `perf-test` and pass the `bucket` Resource to it using the `passed` in the `get` Step
+1. Create a Job called `perf-test` and pass the `compiled-jar` Resource to it using the `passed` in the `get` Step
 1. Create a Task called `deploy-to-perf-env` that will download the jar and deploy to a CloudFoundry test environment 
 
 ```yaml
@@ -79,7 +79,7 @@ In this step we are going to deploy the app to a staging environment and run per
       source:
         repository: governmentpaas/cf-cli
     inputs:
-      - name: bucket
+      - name: compiled-jar
     params:
       CF_API: ((cf_api))
       CF_USERNAME: ((cf_user))
@@ -95,12 +95,13 @@ In this step we are going to deploy the app to a staging environment and run per
             cf api $CF_API --skip-ssl-validation
             cf auth $CF_USERNAME $CF_PASSWORD
             cf target -o $CF_ORG -s $CF_SPACE
-            cf push pet-clinic1 -p bucket/*.jar
+            cf push pet-clinic1 -p compiled-jar/*.jar
 ```
-1. TODO Create a Task to run the performance tests `PETCLINIC_HOST=localhost PETCLINIC_PORT=8080 jmeter -n -t src/test/jmeter/petclinic_test_plan.jmx -l $TMPDIR/log.jtl`
+1. Create a Task to run the performance tests `PETCLINIC_HOST=localhost PETCLINIC_PORT=8080 jmeter -n -t src/test/jmeter/petclinic_test_plan.jmx -l $TMPDIR/log.jtl`
+1. Create a Ensure Step to guarantee that the pushed app will be deleted in case of success or failure
 
 ## 3tr step: create a Job called `deploy`
 In this step we are going to deploy the app to production.
 
-1. TODO Create a Job called `deploy`
-1. TODO Create a Task called `push-to-prod`
+1. Create a Job called `deploy` and pass the `compiled-jar`
+1. Create a Task called `push-to-prod` and push the `compiled-jar` to the prod org and space
