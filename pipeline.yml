@@ -147,3 +147,38 @@ jobs:
                               cf auth $CF_USERNAME $CF_PASSWORD
                               cf target -o $CF_ORG -s $CF_SPACE
                               cf delete -f $APP_NAME
+
+    - name: deploy
+      plan:
+          - aggregate:
+                - get: source-code
+                  passed: [perf-test]
+                - get: compiled-jar
+                  trigger: true
+                  passed: [perf-test]
+          - task: push-to-prod
+            config:
+                platform: linux
+                image_resource:
+                    type: docker-image
+                    source:
+                        repository: governmentpaas/cf-cli
+                inputs:
+                    - name: compiled-jar
+                params:
+                    CF_API: ((cf_api))
+                    CF_USERNAME: ((cf_user))
+                    CF_PASSWORD: ((cf_password))
+                    CF_SPACE: ((cf_prod_space))
+                    CF_ORG: ((cf_prod_org))
+                    APP_NAME: ((cf_prod_app_name))
+                run:
+                    path: /bin/sh
+                    args:
+                        - -c
+                        - |
+                            set -eu
+                            cf api $CF_API --skip-ssl-validation
+                            cf auth $CF_USERNAME $CF_PASSWORD
+                            cf target -o $CF_ORG -s $CF_SPACE
+                            cf push $APP_NAME -p compiled-jar/*.jar
