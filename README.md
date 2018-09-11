@@ -1,3 +1,17 @@
+## Continuous Delivery Best Practices
+- Only build your binaries once
+  - Covered by uploading jar to github in the end of the `build` Job
+- Deploy the same way to every environment
+  - Covered by using the same script to deploy both test and prod
+- Smoke-test your deployments
+  - Covered by running the smoke-tests after deploying to staging and prod
+- Deploy into a copy of production
+  - Covered by deploying to a CF, but different space
+- Each change should propagate through the pipeline instantly
+  - Covered by using the `serial` keyword on jobs
+- If any part of the pipeline fails, stop the line
+  - Covered by using the keyword `passed` when getting resources from previous jobs
+
 # Deployment pipeline
 
 ## Context
@@ -15,9 +29,6 @@ Follow the steps below in order to configure `fly`:
 
 ## 1st step: create a job called `build`
 In this step we are going to create a `build` job that will compile the application and run unit tests.
-
-Continuous delivery best practices:
-- Only build binaries once
 
 1. Create a file called pipeline.yml that you will use to create all your pipeline configuration
 1. Create a [Job](https://concourse-ci.org/jobs.html) called `build` with an empty [Plan](https://concourse-ci.org/jobs.html#job-plan)
@@ -55,8 +66,14 @@ Continuous delivery best practices:
 ```
 1. Modify the `package` Task to create a jar using the version from the semver Resource
 
-## 2nd step: create a Job called `perf-test`
-In this step we are going to deploy the app to a staging environment and run performance tests
+## 2nd step: create a Job called `deploy`
+In this step, we are going to deploy the app to a staging environment and run smoke-tests
+
+1. Create a Task called `deploy-to-staging` that will download the jar and deploy to a CloudFoundry staging environment 
+1. Create a Task called `smoke-test` that will run smoke tests against the deployed application
+
+## 3nd step: create a Job called `acceptance-test`
+In this step we are going to run acceptance/performance tests
 
 1. Create a Job called `perf-test` and pass the `compiled-jar` Resource to it using the `passed` in the `get` Step
 1. Create a Task called `deploy-to-perf-env` that will download the jar and deploy to a CloudFoundry test environment 
@@ -91,7 +108,7 @@ In this step we are going to deploy the app to a staging environment and run per
 1. Create a Task to run the performance tests `PETCLINIC_HOST=localhost PETCLINIC_PORT=8080 jmeter -n -t src/test/jmeter/petclinic_test_plan.jmx -l $TMPDIR/log.jtl`
 1. Create a Ensure Step to guarantee that the pushed app will be deleted in case of success or failure
 
-## 3tr step: create a Job called `deploy`
+## 4tr step: create a Job called `deploy`
 In this step we are going to deploy the app to production.
 
 1. Create a Job called `deploy` and pass the `compiled-jar`

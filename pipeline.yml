@@ -29,6 +29,7 @@ resources:
 
 jobs:
     - name: build
+      serial: true
       plan:
           - get: source-code
           - get: version
@@ -68,12 +69,14 @@ jobs:
                 file: release-jar/*.jar
 
     - name: deploy
+      serial: true
       plan:
-          - get: compiled-jar
-            passed: [build]
-            trigger: true
-          - get: source-code
-            passed: [build]
+          - aggregate:
+              - get: compiled-jar
+                passed: [build]
+                trigger: true
+              - get: source-code
+                passed: [build]
           - task: push-to-staging
             config:
                 platform: linux
@@ -100,14 +103,30 @@ jobs:
                             cf auth $CF_USERNAME $CF_PASSWORD
                             cf target -o $CF_ORG -s $CF_SPACE
                             cf push $APP_NAME -p compiled-jar/*.jar
+          - task: smoke-test
+            config:
+                platform: linux
+                image_resource:
+                    type: docker-image
+                    source:
+                        repository: governmentpaas/cf-cli
+                inputs:
+                    - name: compiled-jar
+                run:
+                    path: curl
+                    args:
+                    - -f
+                    - http://petclinic-((cf_staging_space))-((team)).((cf_app_domain))
 
     - name: test
+      serial: true
       plan:
-          - get: source-code
-            passed: [deploy]
-          - get: compiled-jar
-            passed: [deploy]
-            trigger: true
+          - aggregate:
+              - get: source-code
+                passed: [deploy]
+              - get: compiled-jar
+                passed: [deploy]
+                trigger: true
           - task: run-test
             config:
                 platform: linux
@@ -127,6 +146,34 @@ jobs:
                         - |
                             set -eu
                             jmeter -n -t source-code/src/test/jmeter/petclinic_test_plan.jmx -l ./log.jtl
+            ensure:
+                task: delete-staging-app
+                config:
+                    platform: linux
+                    image_resource:
+                        type: docker-image
+                        source:
+                            repository: governmentpaas/cf-cli
+                    inputs:
+                        - name: compiled-jar
+                    params:
+                        CF_API: ((cf_api))
+                        CF_USERNAME: ((cf_user))
+                        CF_PASSWORD: ((cf_password))
+                        CF_SPACE: ((cf_staging_space))
+                        CF_ORG: ((cf_org))
+                        APP_NAME: petclinic-((cf_staging_space))-((team))
+                    run:
+                        path: /bin/sh
+                        args:
+                            - -c
+                            - |
+                                set -eu
+                                cf api $CF_API --skip-ssl-validation
+                                cf auth $CF_USERNAME $CF_PASSWORD
+                                cf target -o $CF_ORG -s $CF_SPACE
+                                cf delete -f $APP_NAME
+
 
     - name: release
       plan:
@@ -160,3 +207,17 @@ jobs:
                             cf auth $CF_USERNAME $CF_PASSWORD
                             cf target -o $CF_ORG -s $CF_SPACE
                             cf push $APP_NAME -p compiled-jar/*.jar
+          - task: smoke-test
+            config:
+                platform: linux
+                image_resource:
+                    type: docker-image
+                    source:
+                        repository: governmentpaas/cf-cli
+                inputs:
+                    - name: compiled-jar
+                run:
+                    path: curl
+                    args:
+                    - -f
+                    - http://petclinic-((team)).((cf_app_domain))
