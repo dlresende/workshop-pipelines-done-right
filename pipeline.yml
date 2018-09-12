@@ -10,7 +10,7 @@ resources:
       type: s3
       source:
           regexp: ((team))/packages/spring-petclinic-(.*).jar
-          bucket: devopsdays-2018-berlin
+          bucket: ((s3_bucket))
           endpoint: ((s3_endpoint))
           disable_ssl: ((s3_disable_ssl))
           access_key_id: ((s3_access_key_id))
@@ -21,7 +21,7 @@ resources:
       source:
           driver: s3
           key: ((team))/release-version
-          bucket: devopsdays-2018-berlin
+          bucket: ((s3_bucket))
           endpoint: ((s3_endpoint))
           disable_ssl: ((s3_disable_ssl))
           access_key_id: ((s3_access_key_id))
@@ -116,7 +116,6 @@ jobs:
                     path: curl
                     args:
                         - -f
-                        - http://petclinic-((cf_staging_space))-((team)).((cf_app_domain))
 
     - name: test
       serial: true
