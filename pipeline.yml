@@ -72,11 +72,11 @@ jobs:
       serial: true
       plan:
           - aggregate:
-              - get: compiled-jar
-                passed: [build]
-                trigger: true
-              - get: source-code
-                passed: [build]
+                - get: compiled-jar
+                  passed: [build]
+                  trigger: true
+                - get: source-code
+                  passed: [build]
           - task: push-to-staging
             config:
                 platform: linux
@@ -115,18 +115,18 @@ jobs:
                 run:
                     path: curl
                     args:
-                    - -f
-                    - http://petclinic-((cf_staging_space))-((team)).((cf_app_domain))
+                        - -f
+                        - http://petclinic-((cf_staging_space))-((team)).((cf_app_domain))
 
     - name: test
       serial: true
       plan:
           - aggregate:
-              - get: source-code
-                passed: [deploy]
-              - get: compiled-jar
-                passed: [deploy]
-                trigger: true
+                - get: source-code
+                  passed: [deploy]
+                - get: compiled-jar
+                  passed: [deploy]
+                  trigger: true
           - task: run-test
             config:
                 platform: linux
