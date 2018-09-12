@@ -53,8 +53,8 @@ jobs:
                         - |
                             set -eu
                             cd source-code
-                            ./mvnw versions:set -DnewVersion=$(cat ../version/version)
-                            ./mvnw package
+                            ./mvnw -q versions:set -DnewVersion=$(cat ../version/version)
+                            ./mvnw -q package
 
                             cd ..
 
