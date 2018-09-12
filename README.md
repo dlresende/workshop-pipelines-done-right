@@ -51,10 +51,10 @@ In this step, we are going to deploy the app to a staging environment and run sm
 
 1. Create a Task called `push-to-staging` that will download the jar and deploy to a CloudFoundry staging environment:
   - You will need to pass the jar produced in the previous Job (use the [`get` Step](https://concourse-ci.org/get-step.html) and use the [ `passed` Parameter](https://concourse-ci.org/get-step.html#get-step-passed) to instruct Concourse to use the Resource used by the previous Job)
-  - Use the [`governmentpaas/cf-cli`](https://hub.docker.com/r/governmentpaas/cf-cli/) Docker image
-  - [Here](http://cli.cloudfoundry.org/en-US/cf/push.html) you can find some intructions on how to deploy an app to CF (the `cf` CLI is available there)
+  - Use the [`governmentpaas/cf-cli`](https://hub.docker.com/r/governmentpaas/cf-cli/) Docker image (the `cf` CLI is available there)
+  - [Here](http://cli.cloudfoundry.org/en-US/cf/push.html) you can find some intructions on how to deploy an app to CF (use `petclinic-((cf_staging_space))-((team))` as your app name
   - You will find the CF credentials you need in `secrets.yml` (use [ `params` ](https://concourse-ci.org/task-step.html#task-step-params) to pass the credentials to your Task commands).
-1. Create a Task called `smoke-test` that will run smoke tests against the deployed application (this can be a `curl` call for now)
+1. Create a Task called `smoke-test` that will run smoke tests against the deployed application (this can be a `curl` call for now hitting the URL `http://petclinic-((cf_staging_space))-((team)).((cf_app_domain))`)
 1. Set the pipeline and make sure it is green
 
 ## 3nd step: create a Job called `test`
