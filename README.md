@@ -41,7 +41,6 @@ In this step we are going to create a `build` job that will compile the applicat
   - You will need to declare the Resource in `pipelines.yml` and use:
 ```yaml
 regexp: ((team))/packages/spring-petclinic-(.*).jar
-bucket: devopsdays-2018-berlin
 ```
   - You will need to create a [ `put` Step ](https://concourse-ci.org/put-step.html) in the `build` Job which will upload the jar
   - Then create the `output` that will make the jar inside the Task container available to the `put` Step
