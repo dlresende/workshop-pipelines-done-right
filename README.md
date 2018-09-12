@@ -14,8 +14,6 @@
 
 # Deployment pipeline
 
-## Context
-
 ## Requirements
 In order to run this workshop you will need to have the following tools available in your local workstation:
 - [fly](https://concourse-ci.org/download.html)
@@ -108,7 +106,7 @@ In this step we are going to run acceptance/performance tests
 1. Create a Task to run the performance tests `PETCLINIC_HOST=localhost PETCLINIC_PORT=8080 jmeter -n -t src/test/jmeter/petclinic_test_plan.jmx -l $TMPDIR/log.jtl`
 1. Create a Ensure Step to guarantee that the pushed app will be deleted in case of success or failure
 
-## 4tr step: create a Job called `deploy`
+## 4th step: create a Job called `deploy`
 In this step we are going to deploy the app to production.
 
 1. Create a Job called `deploy` and pass the `compiled-jar`
