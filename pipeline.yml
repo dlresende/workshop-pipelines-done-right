@@ -117,3 +117,32 @@ jobs:
                     args:
                         - -f
                         - http://petclinic-((cf_staging_space))-((team)).((cf_app_domain))
+
+    - name: test
+      serial: true
+      plan:
+          - aggregate:
+                - get: source-code
+                  passed: [deploy]
+                - get: compiled-jar
+                  passed: [deploy]
+                  trigger: true
+          - task: run-test
+            config:
+                platform: linux
+                image_resource:
+                    type: docker-image
+                    source:
+                        repository: justb4/jmeter
+                inputs:
+                    - name: source-code
+                params:
+                    PETCLINIC_HOST: http://petclinic-((cf_staging_space))-((team)).((cf_app_domain))
+                    PETCLINIC_PORT: 80
+                run:
+                    path: /bin/sh
+                    args:
+                        - -c
+                        - |
+                            set -eu
+                            jmeter -n -t source-code/src/test/jmeter/petclinic_test_plan.jmx -l ./log.jtl
