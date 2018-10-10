@@ -1,0 +1,43 @@
+---
+resources:
+  - name: source-code
+    type: git
+    source:
+      uri: https://github.com/spring-projects/spring-petclinic.git
+      branch: master
+
+containers:
+  openjdk-8: &openjdk-8
+    platform: linux
+    image_resource:
+      type: docker-image
+      source:
+        repository: openjdk
+        tag: 8-jdk-slim
+
+  cf-cli: &cf-cli
+    platform: linux
+    image_resource:
+      type: docker-image
+      source:
+        repository: governmentpaas/cf-cli
+
+jobs:
+  - name: build
+    plan:
+      - get: source-code
+
+      - task: package
+        config:
+          <<: *openjdk-8
+
+          inputs:
+            - name: source-code
+              path: .
+
+          run:
+            path: /bin/sh
+            args:
+              - -c
+              - |
+                  ./mvnw package
