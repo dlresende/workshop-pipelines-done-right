@@ -15,13 +15,6 @@ containers:
         repository: openjdk
         tag: 8-jdk-slim
 
-  cf-cli: &cf-cli
-    platform: linux
-    image_resource:
-      type: docker-image
-      source:
-        repository: governmentpaas/cf-cli
-
 jobs:
   - name: build
     plan:
