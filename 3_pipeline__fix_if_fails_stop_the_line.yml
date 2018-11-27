@@ -41,7 +41,7 @@ jobs:
             args:
               - -c
               - |
-                  ./mvnw package
+                mvn  package
 
   - name: deploy
     plan:
@@ -60,9 +60,9 @@ jobs:
             args:
               - -c
               - |
-                  cd source-code || exit 1
-                  ./mvnw -q package
-                  cp target/*.jar ../release-jar/
+                cd source-code/
+                mvn  package
+                cp target/*.jar ../release-jar/
 
           outputs:
             - name: release-jar
@@ -70,9 +70,10 @@ jobs:
       - task: deploy-to-staging
         config:
           <<: *cf-cli
+
           inputs:
+            - name: source-code
             - name: release-jar
-              path: .
 
           params:
             CF_API: ((cf_api))
@@ -80,15 +81,8 @@ jobs:
             CF_PASSWORD: ((cf_password))
             CF_SPACE: ((cf_staging_space))
             CF_ORG: ((cf_org))
-            APP_NAME: petclinic-((cf_staging_space))
-            CF_DIAL_TIMEOUT: 60
 
           run:
-            path: /bin/sh
+            path: ./source-code/src/main/scripts/push-to-cloud-foundry
             args:
-              - -c
-              - |
-                cf api "$CF_API"
-                cf auth "$CF_USERNAME" "$CF_PASSWORD"
-                cf target -o "$CF_ORG" -s "$CF_SPACE"
-                cf push "$APP_NAME" -p *.jar
+              - release-jar/*.jar
