@@ -1,10 +1,10 @@
 ---
 resources:
-  - name: source-code
-    type: git
-    source:
-      uri: https://github.com/spring-projects/spring-petclinic.git
-      branch: master
+  # - name: source-code
+  #   type: git
+  #   source:
+  #     uri: https://github.com/spring-projects/spring-petclinic.git
+  #     branch: master
 
 containers:
   maven: &maven
