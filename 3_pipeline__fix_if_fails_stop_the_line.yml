@@ -76,7 +76,7 @@ jobs:
 
           params:
             CF_API: ((cf_api))
-            CF_USERNAME: ((cf_user))
+            CF_USERNAME: ((cf_username))
             CF_PASSWORD: ((cf_password))
             CF_SPACE: ((cf_staging_space))
             CF_ORG: ((cf_org))
