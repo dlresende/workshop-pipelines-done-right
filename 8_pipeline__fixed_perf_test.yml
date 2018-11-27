@@ -1,0 +1,188 @@
+---
+resources:
+  - name: source-code
+    type: git
+    source:
+      uri: https://github.com/spring-projects/spring-petclinic.git
+      branch: master
+
+  - name: compiled-jar
+    type: s3
+    source:
+      regexp: packages/spring-petclinic-(.*).jar
+      bucket: ((s3_bucket))
+      endpoint: ((s3_endpoint))
+      disable_ssl: ((s3_disable_ssl))
+      access_key_id: ((s3_access_key_id))
+      secret_access_key: ((s3_secret_access_key))
+
+containers:
+  maven: &maven
+    platform: linux
+    image_resource:
+      type: docker-image
+      source:
+        repository: maven
+        tag: 3.5.4-jdk-8-alpine
+
+  cf-cli: &cf-cli
+    platform: linux
+    image_resource:
+      type: docker-image
+      source:
+        repository: governmentpaas/cf-cli
+
+  jmeter: &jmeter
+    platform: linux
+    image_resource:
+      type: docker-image
+      source:
+        repository: justb4/jmeter
+
+jobs:
+  - name: build
+    plan:
+      - get: source-code
+        trigger: true
+
+      - task: package
+        config:
+          <<: *maven
+
+          inputs:
+            - name: source-code
+
+          outputs:
+            - name: release-jar
+
+          run:
+            path: /bin/sh
+            args:
+              - -c
+              - |
+                  cd source-code
+                  mvn package
+                  cp target/*.jar ../release-jar/
+
+      - put: compiled-jar
+        params:
+          file: release-jar/*.jar
+
+  - name: deploy
+    plan:
+      - get: source-code
+        passed:
+          - build
+
+      - get: compiled-jar
+        trigger: true
+        passed:
+          - build
+
+      - task: deploy-to-staging
+        config:
+          <<: *cf-cli
+          inputs:
+            - name: compiled-jar
+
+          params:
+            CF_API: ((cf_api))
+            CF_USERNAME: ((cf_user))
+            CF_PASSWORD: ((cf_password))
+            CF_SPACE: ((cf_staging_space))
+            CF_ORG: ((cf_org))
+            APP_NAME: petclinic-((cf_staging_space))
+            CF_DIAL_TIMEOUT: 60
+
+          run:
+            path: /bin/sh
+            args:
+              - -c
+              - |
+                cf api "$CF_API"
+                cf auth "$CF_USERNAME" "$CF_PASSWORD"
+                cf target -o "$CF_ORG" -s "$CF_SPACE"
+                cf push "$APP_NAME" -p compiled-jar/*.jar
+      - task: run-smoke-tests
+        config:
+          <<: *cf-cli
+
+          run:
+            path: curl
+            args:
+              - -f
+              - http://petclinic-((cf_staging_space)).((cf_app_domain))
+
+  - name: test
+    plan:
+      - get: source-code
+        passed: [deploy]
+
+      - get: compiled-jar
+        passed: [deploy]
+        trigger: true
+
+      - task: run-test
+        config:
+          <<: *jmeter
+
+          inputs:
+            - name: source-code
+
+          params:
+            PETCLINIC_HOST: http://petclinic-((cf_staging_space)).((cf_app_domain))
+            PETCLINIC_PORT: 80
+
+          run:
+            path: /bin/sh
+            args:
+              - -c
+              - |
+                  set -eu
+                  jmeter -n -t source-code/src/test/jmeter/petclinic_test_plan.jmx -l ./log.jtl
+
+  - name: release
+    plan:
+      - get: source-code
+        passed:
+          - test
+
+      - get: compiled-jar
+        trigger: true
+        passed:
+          - test
+
+      - task: deploy-to-prod
+        config:
+          <<: *cf-cli
+          inputs:
+            - name: compiled-jar
+
+          params:
+            CF_API: ((cf_api))
+            CF_USERNAME: ((cf_user))
+            CF_PASSWORD: ((cf_password))
+            CF_SPACE: ((cf_prod_space))
+            CF_ORG: ((cf_org))
+            APP_NAME: petclinic-((cf_prod_space))
+            CF_DIAL_TIMEOUT: 60
+
+          run:
+            path: /bin/sh
+            args:
+              - -c
+              - |
+                cf api "$CF_API"
+                cf auth "$CF_USERNAME" "$CF_PASSWORD"
+                cf target -o "$CF_ORG" -s "$CF_SPACE"
+                cf push "$APP_NAME" -p compiled-jar/*.jar
+
+      - task: run-smoke-tests
+        config:
+          <<: *cf-cli
+
+          run:
+            path: curl
+            args:
+              - -f
+              - http://petclinic-((cf_prod_space)).((cf_app_domain))
