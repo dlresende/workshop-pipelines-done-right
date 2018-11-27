@@ -3,7 +3,7 @@ resources:
   - name: source-code
     type: git
     source:
-      uri: https://github.com/spring-projects/spring-petclinic.git
+      uri: https://github.com/dlresende/spring-petclinic.git
       branch: master
 
 containers:
