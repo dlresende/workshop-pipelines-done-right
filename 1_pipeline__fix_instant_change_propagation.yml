@@ -34,4 +34,4 @@ jobs:
             args:
               - -c
               - |
-                  ./mvnw package
+                mvn package
