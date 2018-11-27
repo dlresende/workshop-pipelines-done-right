@@ -6,6 +6,16 @@ resources:
       uri: https://github.com/dlresende/spring-petclinic.git
       branch: master
 
+  # - name: compiled-jar
+  #   type: s3
+  #   source:
+  #     regexp: packages/spring-petclinic-(.*).jar
+  #     bucket: ((s3_bucket))
+  #     endpoint: ((s3_endpoint))
+  #     disable_ssl: ((s3_disable_ssl))
+  #     access_key_id: ((s3_access_key_id))
+  #     secret_access_key: ((s3_secret_access_key))
+
 containers:
   maven: &maven
     platform: linux
@@ -47,6 +57,8 @@ jobs:
     plan:
       - get: source-code
         trigger: true
+        passed:
+          - build
 
       - task: package
         config:
@@ -83,6 +95,21 @@ jobs:
             CF_ORG: ((cf_org))
 
           run:
-            path: ./source-code/src/main/scripts/push-to-cloud-foundry
+            path: /bin/bash
             args:
-              - release-jar/*.jar
+              - -c
+              - |
+                cf api "$CF_API"
+                cf auth
+                cf target -o "$CF_ORG" -s "$CF_SPACE"
+                cf push "petclinic-$CF_SPACE" -p release-jar/*.jar
+      
+      - task: run-smoke-tests
+        config:
+          <<: *cf-cli
+
+          run:
+            path: curl
+            args:
+              - --fail
+              - http://petclinic-((cf_staging_space)).((cf_app_domain))

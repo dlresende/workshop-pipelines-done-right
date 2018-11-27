@@ -32,6 +32,13 @@ containers:
       source:
         repository: governmentpaas/cf-cli
 
+  jmeter: &jmeter
+    platform: linux
+    image_resource:
+      type: docker-image
+      source:
+        repository: justb4/jmeter
+
 jobs:
   - name: build
     plan:
@@ -54,7 +61,7 @@ jobs:
               - -c
               - |
                   cd source-code
-                  mvn package
+                  ./mvnw package
                   cp target/*.jar ../release-jar/
 
       - put: compiled-jar
@@ -84,8 +91,6 @@ jobs:
             CF_PASSWORD: ((cf_password))
             CF_SPACE: ((cf_staging_space))
             CF_ORG: ((cf_org))
-            APP_NAME: petclinic-((cf_staging_space))
-            CF_DIAL_TIMEOUT: 60
 
           run:
             path: /bin/sh
@@ -93,9 +98,10 @@ jobs:
               - -c
               - |
                 cf api "$CF_API"
-                cf auth "$CF_USERNAME" "$CF_PASSWORD"
+                cf auth
                 cf target -o "$CF_ORG" -s "$CF_SPACE"
-                cf push "$APP_NAME" -p compiled-jar/*.jar
+                cf push petclinic-((cf_staging_space)) -p compiled-jar/*.jar
+
       - task: run-smoke-tests
         config:
           <<: *cf-cli
@@ -106,48 +112,20 @@ jobs:
               - -f
               - http://petclinic-((cf_staging_space)).((cf_app_domain))
 
-  - name: release
+  - name: test
     plan:
       - get: source-code
         passed:
           - deploy
 
       - get: compiled-jar
-        trigger: true
         passed:
           - deploy
+        trigger: true
 
-      - task: deploy-to-prod
+      - task: run-performance-tests
         config:
-          <<: *cf-cli
-          inputs:
-            - name: compiled-jar
-
-          params:
-            CF_API: ((cf_api))
-            CF_USERNAME: ((cf_username))
-            CF_PASSWORD: ((cf_password))
-            CF_SPACE: ((cf_prod_space))
-            CF_ORG: ((cf_org))
-            APP_NAME: petclinic-((cf_prod_space))
-            CF_DIAL_TIMEOUT: 60
+          <<: *jmeter
 
           run:
-            path: /bin/sh
-            args:
-              - -c
-              - |
-                cf api "$CF_API"
-                cf auth "$CF_USERNAME" "$CF_PASSWORD"
-                cf target -o "$CF_ORG" -s "$CF_SPACE"
-                cf push "$APP_NAME" -p compiled-jar/*.jar
-
-      - task: run-smoke-tests
-        config:
-          <<: *cf-cli
-
-          run:
-            path: curl
-            args:
-              - -f
-              - http://petclinic-((cf_prod_space)).((cf_app_domain))
+            path: ./source-code/src/main/scripts/run-performance-tests

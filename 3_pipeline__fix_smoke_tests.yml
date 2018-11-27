@@ -6,16 +6,6 @@ resources:
       uri: https://github.com/dlresende/spring-petclinic.git
       branch: master
 
-  # - name: compiled-jar
-  #   type: s3
-  #   source:
-  #     regexp: packages/spring-petclinic-(.*).jar
-  #     bucket: ((s3_bucket))
-  #     endpoint: ((s3_endpoint))
-  #     disable_ssl: ((s3_disable_ssl))
-  #     access_key_id: ((s3_access_key_id))
-  #     secret_access_key: ((s3_secret_access_key))
-
 containers:
   maven: &maven
     platform: linux
@@ -51,14 +41,12 @@ jobs:
             args:
               - -c
               - |
-                  ./mvnw package
+                mvn  package
 
   - name: deploy
     plan:
       - get: source-code
         trigger: true
-        passed:
-          - build
 
       - task: package
         config:
@@ -72,9 +60,9 @@ jobs:
             args:
               - -c
               - |
-                  cd source-code || exit 1
-                  ./mvnw -q package
-                  cp target/*.jar ../release-jar/
+                cd source-code/
+                mvn  package
+                cp target/*.jar ../release-jar/
 
           outputs:
             - name: release-jar
@@ -82,9 +70,10 @@ jobs:
       - task: deploy-to-staging
         config:
           <<: *cf-cli
+
           inputs:
+            - name: source-code
             - name: release-jar
-              path: .
 
           params:
             CF_API: ((cf_api))
@@ -92,15 +81,13 @@ jobs:
             CF_PASSWORD: ((cf_password))
             CF_SPACE: ((cf_staging_space))
             CF_ORG: ((cf_org))
-            APP_NAME: petclinic-((cf_staging_space))
-            CF_DIAL_TIMEOUT: 60
 
           run:
-            path: /bin/sh
+            path: /bin/bash
             args:
               - -c
               - |
                 cf api "$CF_API"
-                cf auth "$CF_USERNAME" "$CF_PASSWORD"
+                cf auth
                 cf target -o "$CF_ORG" -s "$CF_SPACE"
-                cf push "$APP_NAME" -p *.jar
+                cf push "petclinic-$CF_SPACE" -p release-jar/*.jar

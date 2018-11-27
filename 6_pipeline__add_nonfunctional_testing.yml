@@ -32,6 +32,13 @@ containers:
       source:
         repository: governmentpaas/cf-cli
 
+  # jmeter: &jmeter
+  #   platform: linux
+  #   image_resource:
+  #     type: docker-image
+  #     source:
+  #       repository: justb4/jmeter
+
 jobs:
   - name: build
     plan:
@@ -84,18 +91,17 @@ jobs:
             CF_PASSWORD: ((cf_password))
             CF_SPACE: ((cf_staging_space))
             CF_ORG: ((cf_org))
-            APP_NAME: petclinic-((cf_staging_space))
-            CF_DIAL_TIMEOUT: 60
 
           run:
-            path: /bin/sh
+            path: /bin/bash
             args:
               - -c
               - |
                 cf api "$CF_API"
-                cf auth "$CF_USERNAME" "$CF_PASSWORD"
+                cf auth
                 cf target -o "$CF_ORG" -s "$CF_SPACE"
-                cf push "$APP_NAME" -p compiled-jar/*.jar
+                cf push "petclinic-$CF_SPACE" -p release-jar/*.jar
+
       - task: run-smoke-tests
         config:
           <<: *cf-cli
@@ -103,5 +109,5 @@ jobs:
           run:
             path: curl
             args:
-              - -f
+              - --fail
               - http://petclinic-((cf_staging_space)).((cf_app_domain))

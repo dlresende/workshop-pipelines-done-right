@@ -61,7 +61,7 @@ jobs:
               - -c
               - |
                   cd source-code
-                  mvn package
+                  ./mvnw package
                   cp target/*.jar ../release-jar/
 
       - put: compiled-jar
@@ -91,18 +91,12 @@ jobs:
             CF_PASSWORD: ((cf_password))
             CF_SPACE: ((cf_staging_space))
             CF_ORG: ((cf_org))
-            APP_NAME: petclinic-((cf_staging_space))
-            CF_DIAL_TIMEOUT: 60
 
           run:
-            path: /bin/sh
+            path: ./source-code/src/main/scripts/push-to-cloud-foundry
             args:
-              - -c
-              - |
-                cf api "$CF_API"
-                cf auth "$CF_USERNAME" "$CF_PASSWORD"
-                cf target -o "$CF_ORG" -s "$CF_SPACE"
-                cf push "$APP_NAME" -p compiled-jar/*.jar
+              - compiled-jar/*.jar
+
       - task: run-smoke-tests
         config:
           <<: *cf-cli
@@ -116,30 +110,20 @@ jobs:
   - name: test
     plan:
       - get: source-code
-        passed: [deploy]
+        passed:
+          - deploy
 
       - get: compiled-jar
-        passed: [deploy]
+        passed:
+          - deploy
         trigger: true
 
-      - task: run-test
+      - task: run-performance-tests
         config:
           <<: *jmeter
 
-          inputs:
-            - name: source-code
-
-          params:
-            PETCLINIC_HOST: http://petclinic-((cf_staging_space)).((cf_app_domain))
-            PETCLINIC_PORT: 80
-
           run:
-            path: /bin/sh
-            args:
-              - -c
-              - |
-                  set -eu
-                  jmeter -n -t source-code/src/test/jmeter/petclinic_test_plan.jmx -l ./log.jtl
+            path: ./source-code/src/main/scripts/run-performance-tests
 
   - name: release
     plan:
@@ -148,15 +132,16 @@ jobs:
           - test
 
       - get: compiled-jar
-        trigger: true
         passed:
           - test
+        trigger: true
 
-      - task: deploy-to-prod
+      - task: deploy-to-production
         config:
           <<: *cf-cli
+
           inputs:
-            - name: compiled-jar
+            - name: source-code
 
           params:
             CF_API: ((cf_api))
@@ -164,25 +149,8 @@ jobs:
             CF_PASSWORD: ((cf_password))
             CF_SPACE: ((cf_prod_space))
             CF_ORG: ((cf_org))
-            APP_NAME: petclinic-((cf_prod_space))
-            CF_DIAL_TIMEOUT: 60
 
           run:
-            path: /bin/sh
+            path: ./source-code/src/main/scripts/push-to-cloud-foundry
             args:
-              - -c
-              - |
-                cf api "$CF_API"
-                cf auth "$CF_USERNAME" "$CF_PASSWORD"
-                cf target -o "$CF_ORG" -s "$CF_SPACE"
-                cf push "$APP_NAME" -p compiled-jar/*.jar
-
-      - task: run-smoke-tests
-        config:
-          <<: *cf-cli
-
-          run:
-            path: curl
-            args:
-              - -f
-              - http://petclinic-((cf_prod_space)).((cf_app_domain))
+              - compiled-jar/*.jar
