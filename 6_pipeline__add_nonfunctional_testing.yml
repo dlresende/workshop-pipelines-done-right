@@ -82,6 +82,7 @@ jobs:
       - task: deploy-to-staging
         config:
           <<: *cf-cli
+
           inputs:
             - name: compiled-jar
 
@@ -100,7 +101,7 @@ jobs:
                 cf api "$CF_API"
                 cf auth
                 cf target -o "$CF_ORG" -s "$CF_SPACE"
-                cf push "petclinic-$CF_SPACE" -p release-jar/*.jar
+                cf push "petclinic-$CF_SPACE" -p compiled-jar/*.jar
 
       - task: run-smoke-tests
         config:
