@@ -61,7 +61,7 @@ jobs:
               - -c
               - |
                   cd source-code
-                  ./mvnw package
+                  mvn package
                   cp target/*.jar ../release-jar/
 
       - put: compiled-jar
