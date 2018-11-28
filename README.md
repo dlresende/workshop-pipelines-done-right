@@ -1,16 +1,38 @@
 ## Continuous Delivery Best Practices
-- Only build your binaries once
-  - Covered by uploading jar to github in the end of the `build` Job
-- Deploy the same way to every environment
-  - Covered by using the same script to deploy both test and prod
-- Smoke-test your deployments
-  - Covered by running the smoke-tests after deploying to staging and prod
-- Deploy into a copy of production
-  - Covered by deploying to a CF, but different space
-- Each change should propagate through the pipeline instantly
-  - Covered by using the `serial` keyword on jobs
-- If any part of the pipeline fails, stop the line
-  - Covered by using the keyword `passed` when getting resources from previous jobs
+1. Each change should propagate through the pipeline instantly
+  Why:
+    - to shorten the feedback loop as much as possible
+    - avoid pilling up changes that will create bottle necks in the pipeline
+  How:
+    - each change in a resource should `trigger` a new build
+    - also covered by using the `serial` keyword on jobs so that build won't pile up
+1. Deploy into a copy of production
+  Why:
+    - to have a good level of confidence the deployment and the app will behave as expected in production
+  How:
+    - in our case covered by deplying in CF
+1. Smoke-test your deployments
+  Why:
+    - to make sure your deployment scripts/tools are working fine and your configuration is correct
+  How:
+    - in our case make a cURL call to the app
+1. If any part of the pipeline fails, stop the line
+  Why:
+    - reduce the feedback loop between failures and fixes
+  How:
+    - Covered by using the keyword `passed` when getting resources from previous jobs
+1. Only build your binaries once
+  Why:
+    - to make sure the binary being deployed to production is the binary that was tested by the pipeline
+    - avoid spending time builing binaries many times
+  How:
+    - Covered by uploading the jar to S3 in the end of the `build` Job
+1. Deploy the same way to every environment
+  Why:
+    - to ensure that the build and deployment process is tested efficiently
+    - to share the same tools between devs and ops
+  How:
+    - use the same script to deploy both test and prod
 
 # Deployment pipeline
 
