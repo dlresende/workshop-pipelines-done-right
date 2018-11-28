@@ -124,6 +124,13 @@ jobs:
         config:
           <<: *jmeter
 
+          inputs:
+            - name: source-code
+
+          params:
+            PETCLINIC_HOST: https://petclinic-((cf_staging_space)).((cf_app_domain))
+            PETCLINIC_PORT: 80
+
           run:
             path: ./source-code/src/main/scripts/run-performance-tests
 
