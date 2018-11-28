@@ -149,7 +149,7 @@ jobs:
             - name: source-code
 
           params:
-            PETCLINIC_HOST: https://petclinic-((cf_staging_space)).((cf_app_domain))
+            PETCLINIC_HOST: http://petclinic-((cf_staging_space)).((cf_app_domain))
             PETCLINIC_PORT: 80
 
           run:
