@@ -16,6 +16,17 @@ resources:
       access_key_id: ((s3_access_key_id))
       secret_access_key: ((s3_secret_access_key))
 
+  - name: version
+    type: semver
+    source:
+      driver: s3
+      key: release-version
+      bucket: ((s3_bucket))
+      endpoint: ((s3_endpoint))
+      disable_ssl: ((s3_disable_ssl))
+      access_key_id: ((s3_access_key_id))
+      secret_access_key: ((s3_secret_access_key))
+
 containers:
   maven: &maven
     platform: linux
@@ -45,12 +56,17 @@ jobs:
       - get: source-code
         trigger: true
 
+      - get: version
+        params:
+          pre: alpha
+
       - task: package
         config:
           <<: *maven
 
           inputs:
             - name: source-code
+            - name: version
 
           outputs:
             - name: release-jar
@@ -61,12 +77,17 @@ jobs:
               - -c
               - |
                   cd source-code
+                  mvn -q versions:set -DnewVersion=$(cat ../version/version)
                   mvn package
                   cp target/*.jar ../release-jar/
 
       - put: compiled-jar
         params:
           file: release-jar/*.jar
+
+      - put: version
+        params:
+          file: version/version
 
   - name: deploy
     plan:
