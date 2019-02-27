@@ -6,16 +6,6 @@ resources:
       uri: https://github.com/dlresende/spring-petclinic.git
       branch: master
 
-  - name: compiled-jar
-    type: s3
-    source:
-      regexp: packages/spring-petclinic-(.*).jar
-      bucket: ((s3_bucket))
-      endpoint: ((s3_endpoint))
-      disable_ssl: ((s3_disable_ssl))
-      access_key_id: ((s3_access_key_id))
-      secret_access_key: ((s3_secret_access_key))
-
 containers:
   maven: &maven
     platform: linux
@@ -32,13 +22,6 @@ containers:
       source:
         repository: governmentpaas/cf-cli
 
-  # jmeter: &jmeter
-  #   platform: linux
-  #   image_resource:
-  #     type: docker-image
-  #     source:
-  #       repository: justb4/jmeter
-
 jobs:
   - name: build
     plan:
@@ -52,38 +35,44 @@ jobs:
           inputs:
             - name: source-code
 
-          outputs:
-            - name: release-jar
+          run:
+            path: /bin/sh
+            args:
+              - -c
+              - |
+                cd source-code
+                mvn package
+
+  - name: deploy
+    plan:
+      - get: source-code
+        trigger: true
+
+      - task: package
+        config:
+          <<: *maven
+
+          inputs:
+            - name: source-code
 
           run:
             path: /bin/sh
             args:
               - -c
               - |
-                  cd source-code
-                  mvn package
-                  cp target/*.jar ../release-jar/
+                cd source-code/
+                mvn  package
+                cp target/*.jar ../compiled-jar/
 
-      - put: compiled-jar
-        params:
-          file: release-jar/*.jar
-
-  - name: deploy
-    plan:
-      - get: source-code
-        passed:
-          - build
-
-      - get: compiled-jar
-        trigger: true
-        passed:
-          - build
+          outputs:
+            - name: compiled-jar
 
       - task: deploy-to-staging
         config:
           <<: *cf-cli
 
           inputs:
+            - name: source-code
             - name: compiled-jar
 
           params:
@@ -98,7 +87,7 @@ jobs:
             args:
               - -c
               - |
-                cf api "$CF_API"
+                cf api --skip-ssl-validation "$CF_API"
                 cf auth
                 cf target -o "$CF_ORG" -s "$CF_SPACE"
                 cf push "petclinic-$CF_SPACE" -p compiled-jar/*.jar

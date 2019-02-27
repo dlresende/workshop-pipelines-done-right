@@ -32,13 +32,6 @@ containers:
       source:
         repository: governmentpaas/cf-cli
 
-  jmeter: &jmeter
-    platform: linux
-    image_resource:
-      type: docker-image
-      source:
-        repository: justb4/jmeter
-
 jobs:
   - name: build
     plan:
@@ -52,17 +45,17 @@ jobs:
           inputs:
             - name: source-code
 
-          outputs:
-            - name: release-jar
-
           run:
             path: /bin/sh
             args:
               - -c
               - |
-                  cd source-code
-                  ./mvnw package
-                  cp target/*.jar ../release-jar/
+                cd source-code
+                mvn package
+                cp target/*.jar ../release-jar/
+
+          outputs:
+            - name: release-jar
 
       - put: compiled-jar
         params:
@@ -82,8 +75,10 @@ jobs:
       - task: deploy-to-staging
         config:
           <<: *cf-cli
+
           inputs:
             - name: compiled-jar
+            - name: source-code
 
           params:
             CF_API: ((cf_api))
@@ -93,14 +88,9 @@ jobs:
             CF_ORG: ((cf_org))
 
           run:
-            path: /bin/sh
+            path: ./source-code/src/main/scripts/push-to-cloud-foundry
             args:
-              - -c
-              - |
-                cf api "$CF_API"
-                cf auth
-                cf target -o "$CF_ORG" -s "$CF_SPACE"
-                cf push petclinic-((cf_staging_space)) -p compiled-jar/*.jar
+              - compiled-jar/*.jar
 
       - task: run-smoke-tests
         config:
@@ -109,10 +99,10 @@ jobs:
           run:
             path: curl
             args:
-              - -f
+              - --fail
               - http://petclinic-((cf_staging_space)).((cf_app_domain))
 
-  - name: test
+  - name: release
     plan:
       - get: source-code
         passed:
@@ -123,9 +113,22 @@ jobs:
           - deploy
         trigger: true
 
-      - task: run-performance-tests
+      - task: deploy-to-production
         config:
-          <<: *jmeter
+          <<: *cf-cli
+
+          inputs:
+            - name: source-code
+            - name: compiled-jar
+
+          params:
+            CF_API: ((cf_api))
+            CF_USERNAME: ((cf_username))
+            CF_PASSWORD: ((cf_password))
+            CF_SPACE: ((cf_prod_space))
+            CF_ORG: ((cf_org))
 
           run:
-            path: ./source-code/src/main/scripts/run-performance-tests
+            path: ./source-code/src/main/scripts/push-to-cloud-foundry
+            args:
+              - compiled-jar/*.jar

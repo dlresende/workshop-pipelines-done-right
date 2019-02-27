@@ -34,14 +34,14 @@ jobs:
 
           inputs:
             - name: source-code
-              path: .
 
           run:
             path: /bin/sh
             args:
               - -c
               - |
-                mvn  package
+                cd source-code
+                mvn package
 
   - name: deploy
     plan:
@@ -62,10 +62,10 @@ jobs:
               - |
                 cd source-code/
                 mvn  package
-                cp target/*.jar ../release-jar/
+                cp target/*.jar ../compiled-jar/
 
           outputs:
-            - name: release-jar
+            - name: compiled-jar
 
       - task: deploy-to-staging
         config:
@@ -73,7 +73,7 @@ jobs:
 
           inputs:
             - name: source-code
-            - name: release-jar
+            - name: compiled-jar
 
           params:
             CF_API: ((cf_api))
@@ -87,7 +87,7 @@ jobs:
             args:
               - -c
               - |
-                cf api "$CF_API"
+                cf api --skip-ssl-validation "$CF_API"
                 cf auth
                 cf target -o "$CF_ORG" -s "$CF_SPACE"
-                cf push "petclinic-$CF_SPACE" -p release-jar/*.jar
+                cf push "petclinic-$CF_SPACE" -p compiled-jar/*.jar

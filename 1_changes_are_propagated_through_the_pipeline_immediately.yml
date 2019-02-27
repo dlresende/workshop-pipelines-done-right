@@ -34,11 +34,11 @@ jobs:
 
           inputs:
             - name: source-code
-              path: .
 
           run:
             path: /bin/sh
             args:
               - -c
               - |
+                cd source-code
                 mvn package
