@@ -9,12 +9,12 @@ resources:
   - name: compiled-jar
     type: s3
     source:
-      regexp: packages/spring-petclinic-(.*).jar
-      bucket: ((s3_bucket))
-      endpoint: ((s3_endpoint))
-      disable_ssl: ((s3_disable_ssl))
-      access_key_id: ((s3_access_key_id))
-      secret_access_key: ((s3_secret_access_key))
+      regexp: spring-petclinic-(.*).jar
+      bucket: ((s3.bucket))
+      endpoint: ((s3.endpoint))
+      access_key_id: ((s3.access_key_id))
+      secret_access_key: ((s3.secret_access_key))
+      region_name: ((s3.region_name))
 
 containers:
   maven: &maven
