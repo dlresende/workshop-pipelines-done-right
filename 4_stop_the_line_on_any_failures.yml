@@ -78,11 +78,11 @@ jobs:
             - name: compiled-jar
 
           params:
-            CF_API: ((cf_api))
-            CF_USERNAME: ((cf_username))
-            CF_PASSWORD: ((cf_password))
-            CF_SPACE: ((cf_staging_space))
-            CF_ORG: ((cf_org))
+            CF_API: ((cf.api))
+            CF_USERNAME: ((cf.username))
+            CF_PASSWORD: ((cf.password))
+            CF_SPACE: ((cf.staging_space))
+            CF_ORG: ((cf.org))
 
           run:
             path: /bin/bash
@@ -102,4 +102,4 @@ jobs:
             path: curl
             args:
               - --fail
-              - http://petclinic-((cf_staging_space)).((cf_app_domain))
+              - http://petclinic-((cf.staging_space)).((cf.app_domain))

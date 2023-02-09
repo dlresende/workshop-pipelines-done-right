@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+cf create-user dev pass
+
+cf create-org petclinic
+cf target -o petclinic
+cf set-org-role dev techtalk OrgManager
+
+cf create-space prod
+cf set-space-role dev techtalk prod SpaceDeveloper
+
+cf create-space staging
+cf set-space-role dev techtalk staging SpaceDeveloper
